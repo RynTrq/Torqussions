@@ -35,7 +35,7 @@ const ProjectList = () => {
                 description: projectDesc
             })
             const newProject = res.data
-            setProjects(prev => [newProject, ...prev])
+            setProjects(prev => [ ...prev , newProject])
             setCurrentPage(1)
             setProjectName("")
             setProjectDesc("")
@@ -146,8 +146,7 @@ const ProjectList = () => {
                     {visibleProjects.map(project => (
                         <ProjectCard
                         key={project._id}
-                        name={project.name}
-                        description={project.description}
+                        projectProp = {project}
                         />
                     ))}
                 </div>

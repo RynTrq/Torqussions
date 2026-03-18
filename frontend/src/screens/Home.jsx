@@ -9,7 +9,7 @@ const Home = () => {
 
   return (
     <div className="h-screen bg- bg-cover bg-center text-white flex flex-col" style={{backgroundImage: `url(${bg})`}}>
-      <Header />
+      <Header titleProp=""/>
       <ProjectList />
     </div>
   )

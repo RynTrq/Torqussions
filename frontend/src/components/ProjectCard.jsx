@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom';
 
 import icon1 from '../assets/Project-Icons/1.png'
 import icon2 from '../assets/Project-Icons/2.png'
@@ -24,7 +25,11 @@ const icons = [
   icon13, icon14, icon15, icon16
 ]
 
-const ProjectCard = ({ name, description }) => {
+const ProjectCard = ( {projectProp} ) => {
+  const {name, description} = projectProp;
+
+  const navigate = useNavigate();
+
   const randomIcon = useMemo(() => {
     const index = Math.floor(Math.random() * icons.length)
     return icons[index]
@@ -38,8 +43,12 @@ const ProjectCard = ({ name, description }) => {
       active:scale-95
       active:shadow-[0_0_10px_rgba(255,255,255,0.6)]
       hover:brightness-110
-      hover:cursor-pointer
-    '>
+      hover:cursor-pointer'
+      onClick={() => {
+        navigate('/project', {
+          state: {projectProp}
+        })
+      }}>
       <div className='h-[70%] mb-2 flex flex-row p-4'>
         <img src={randomIcon} alt="Project Icon" className='h-full'/>
 
