@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
+import { UserContext } from '../context/user.context'
 import addUsersIcon from "../assets/icon-add-users.png"
 import iconAllUsers from "../assets/icon-allUsers.png"
 import iconSendMsg from "../assets/sendMsg.png"
 import axios from "../config/axios.js";
+import { initializeSocket, receiveMessage, sendMessage } from '../config/socket.js';
+import SentMessage from './SentMessage.jsx'
+import ReceiveMessage from './ReceiveMessage.jsx'
 
 const Chats = ({projectProp}) => {
     const [isModal, setIsModal] = useState(false);
@@ -11,9 +15,22 @@ const Chats = ({projectProp}) => {
     const [search, setSearch] = useState("");
     const [filteredUsers, setFilteredUsers] = useState([]);
     const [selectedUsers, setSelectedUsers] = useState([]);
-    const [projectUsers, setProjectUsers] = useState([])
+    const [projectUsers, setProjectUsers] = useState([]);
+    const [message, setMessage] = useState("");
+    const [messages, setMessages] = useState([]);
+
+    const messagesEndRef = useRef(null);
+    const { user } = useContext(UserContext);
 
     useEffect(() => {
+      initializeSocket(projectProp._id);
+
+      receiveMessage('project-message', data => {
+        if (data.sender?._id !== user?._id) {
+          setMessages(prev => [...prev, data]);
+        }
+      })
+
       axios.get('/users/all')
       .then((res) => {
           setallUsers(res.data.users);
@@ -50,6 +67,10 @@ const Chats = ({projectProp}) => {
       setFilteredUsers(result);
     }, [search, allUsers, projectUsers]);
 
+    useEffect(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, [messages]);
+
     async function addUsersHandler(e){
       e.preventDefault();
       try {
@@ -75,8 +96,48 @@ const Chats = ({projectProp}) => {
       }
     }
 
+    async function sendHandler(e) {
+      e.preventDefault();
+
+      if (!message.trim()) return;
+      const msgData = {
+        message,
+        sender: user
+      };
+
+      sendMessage('project-message', msgData);
+      setMessages(prev => [...prev, msgData]);
+      setMessage("");
+    }
+
   return (
     <div className='m-2 h-[95%] w-[33%] rounded-2xl bg-black/30 flex flex-col-reverse'>
+      <style>{`
+        .chat-scroll {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(201,163,74,0.4) rgba(0,0,0,0.2);
+        }
+
+        .chat-scroll::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .chat-scroll::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.3); /* IMPORTANT: prevents default blue bleed */
+          border-radius: 10px;
+        }
+
+        .chat-scroll::-webkit-scrollbar-thumb {
+          background: rgba(201, 163, 74, 0.4); /* dim gold */
+          border-radius: 10px;
+          border: 1px solid rgba(201, 163, 74, 0.2);
+        }
+
+        .chat-scroll::-webkit-scrollbar-thumb:hover {
+          background: rgba(201, 163, 74, 0.6);
+        }
+      `}</style>
+      
       <div className='h-[10%] bg-black/60 rounded-2xl flex flex-row items-center'>
         <div className='h-[75%] w-[15%] rounded-2xl flex items-center justify-center ml-2'
         onClick={() => {
@@ -90,9 +151,10 @@ const Chats = ({projectProp}) => {
           active:scale-95'/>
         </div>
 
-        <form className='h-full w-full ml-2 flex items-center'>
-          <input type="text" className='h-[70%] w-[82%] p-2 border border-white/50 hover:border-white/80 focus:border-sky-300/80 rounded-2xl'/>
-          <button type='submit' onClick={(e) => {e.preventDefault()}} className='h-[75%] w-[15%] rounded-2xl flex items-center justify-center ml-2'>
+        <form onSubmit={sendHandler} className='h-full w-full ml-2 flex items-center'>
+          <input type="text" value={message} onChange={(e) => {setMessage(e.target.value)}} className='h-[70%] w-[82%] p-2 border border-white/50 hover:border-white/80 focus:border-sky-300/80 rounded-2xl'
+          style={{fontFamily: 'Roboto Slab'}}/>
+          <button type='submit' className='h-[75%] w-[15%] rounded-2xl flex items-center justify-center ml-2'>
             <img src={iconSendMsg} alt="Send" className='brightness-40 hover:brightness-65 hover:cursor-pointer
             transition-all duration-300 ease-in-out
             hover:scale-105
@@ -101,8 +163,32 @@ const Chats = ({projectProp}) => {
         </form>
       </div>
 
-      {/* ALL COLABORATORS MODAL STARTS HERE */}
+      
       <div className='relative h-full w-full flex items-center justify-center'>
+        {/* MESSAGING STARTS HERE */}
+        <div
+          className='chat-scroll absolute h-full w-full p-4 pb-6 pr-3 overflow-y-auto flex flex-col gap-3'
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "#3ba4ff transparent"
+          }}
+        >
+          {messages.map((msg, index) => {
+            const isMe = msg.sender?._id === user?._id;
+
+            return isMe ? (
+              <SentMessage key={index} messageInfo={msg} />
+            ) : (
+              <ReceiveMessage key={index} messageInfo={msg} />
+            );
+          })}
+
+          <div ref={messagesEndRef} />
+        </div>
+        
+        
+        
+        {/* ALL COLABORATORS MODAL STARTS HERE */}
         <div className={`absolute inset-7 bg-black/1 backdrop-blur-md h-[90%] w-[90%] rounded-3xl 
         ${isModal2 ? "opacity-100" : "opacity-0 pointer-events-none"}
         transition-all duration-300 flex flex-col`}>
@@ -146,7 +232,7 @@ const Chats = ({projectProp}) => {
             )}
           </div>
         </div>
-      {/* ALL COLABORATORS MODAL STARTS HERE */}
+        {/* ALL COLABORATORS MODAL ENDS HERE */}
         
         
         {/* ADD COLABORATORS MODAL STARTS HERE */}
