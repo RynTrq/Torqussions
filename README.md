@@ -68,6 +68,7 @@ Frontend runs on Vite and proxies API calls to the backend in local development.
 - Keep backend `CLIENT_URL` set to the deployed frontend origin if you use a custom domain.
 - On Render, the app can also fall back to Render's own `RENDER_EXTERNAL_URL` automatically for same-origin deployment.
 - In production, the backend now serves the built frontend from `frontend/dist` automatically when that build exists.
+- If your host installs dependencies in production mode, make sure the frontend build still installs devDependencies because Vite is required at build time.
 
 ## Scripts
 
