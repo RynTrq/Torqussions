@@ -1,6 +1,27 @@
 import axios from 'axios'
 
-const getApiBaseUrl = () => import.meta.env.VITE_API_URL?.trim() || ''
+const normalizeApiUrl = (value = '') => {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return ''
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedValue)
+    const isLoopbackOrigin = ['localhost', '127.0.0.1'].includes(parsedUrl.hostname)
+
+    if (import.meta.env.PROD && isLoopbackOrigin) {
+      return ''
+    }
+
+    return parsedUrl.origin
+  } catch {
+    return ''
+  }
+}
+
+const getApiBaseUrl = () => normalizeApiUrl(import.meta.env.VITE_API_URL || '')
 
 const axiosInstance = axios.create({
   baseURL: getApiBaseUrl(),

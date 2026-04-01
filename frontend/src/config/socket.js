@@ -2,9 +2,30 @@ import { io } from 'socket.io-client'
 
 let socketInstance = null
 
+const normalizeSocketUrl = (value = '') => {
+  const trimmedValue = value.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedValue)
+    const isLoopbackOrigin = ['localhost', '127.0.0.1'].includes(parsedUrl.hostname)
+
+    if (import.meta.env.PROD && isLoopbackOrigin) {
+      return undefined
+    }
+
+    return parsedUrl.origin
+  } catch {
+    return undefined
+  }
+}
+
 const getSocketUrl = () =>
-  import.meta.env.VITE_SOCKET_URL?.trim() ||
-  import.meta.env.VITE_API_URL?.trim() ||
+  normalizeSocketUrl(import.meta.env.VITE_SOCKET_URL || '') ||
+  normalizeSocketUrl(import.meta.env.VITE_API_URL || '') ||
   undefined
 
 export const initializeSocket = (projectId) => {
