@@ -17,7 +17,10 @@ const isLocalDevelopmentOrigin = (origin) => {
 };
 
 export const allowedOrigins = (
-  process.env.CLIENT_URL || process.env.FRONTEND_URL || fallbackOrigins.join(',')
+  process.env.CLIENT_URL ||
+  process.env.FRONTEND_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  fallbackOrigins.join(',')
 )
   .split(',')
   .map((origin) => origin.trim())

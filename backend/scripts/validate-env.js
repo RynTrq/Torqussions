@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 import Redis from 'ioredis'
 
 const requiredKeys = ['MONGO_URI', 'JWT_SECRET']
-const recommendedKeys = ['CLIENT_URL', 'GEMINI_API_KEY']
+const recommendedKeys = ['GEMINI_API_KEY']
 
 const statusLines = []
 let hasFailure = false
@@ -31,21 +31,39 @@ for (const key of recommendedKeys) {
   }
 }
 
+if (process.env.CLIENT_URL?.trim()) {
+  addStatus('ok', 'CLIENT_URL is present')
+} else if (process.env.RENDER_EXTERNAL_URL?.trim()) {
+  addStatus('ok', 'RENDER_EXTERNAL_URL is present and can be used for same-origin deployment')
+} else {
+  addStatus('warn', 'CLIENT_URL is not set')
+}
+
 if (process.env.JWT_SECRET && process.env.JWT_SECRET.trim().length < 16) {
   addStatus('warn', 'JWT_SECRET is present but shorter than 16 characters')
 }
 
-if (process.env.CLIENT_URL?.trim()) {
-  const origins = process.env.CLIENT_URL.split(',').map((origin) => origin.trim()).filter(Boolean)
+const configuredOrigins = (
+  process.env.CLIENT_URL ||
+  process.env.FRONTEND_URL ||
+  process.env.RENDER_EXTERNAL_URL ||
+  ''
+)
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean)
 
-  for (const origin of origins) {
+if (configuredOrigins.length) {
+  for (const origin of configuredOrigins) {
     try {
       new URL(origin)
-      addStatus('ok', `CLIENT_URL origin is valid: ${origin}`)
+      addStatus('ok', `Allowed origin is valid: ${origin}`)
     } catch {
-      addStatus('error', `CLIENT_URL origin is invalid: ${origin}`)
+      addStatus('error', `Allowed origin is invalid: ${origin}`)
     }
   }
+} else {
+  addStatus('warn', 'No production frontend origin is configured')
 }
 
 if (process.env.MONGO_URI?.trim()) {
