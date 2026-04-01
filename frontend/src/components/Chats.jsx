@@ -1,303 +1,144 @@
-import React, { useState, useEffect, useContext, useRef } from 'react'
-import { UserContext } from '../context/user.context'
-import addUsersIcon from "../assets/icon-add-users.png"
-import iconAllUsers from "../assets/icon-allUsers.png"
-import iconSendMsg from "../assets/sendMsg.png"
-import axios from "../config/axios.js";
-import { initializeSocket, receiveMessage, sendMessage } from '../config/socket.js';
-import SentMessage from './SentMessage.jsx'
-import ReceiveMessage from './ReceiveMessage.jsx'
+import React, { useEffect, useRef } from 'react'
+import SentMessage from './SentMessage'
+import ReceiveMessage from './ReceiveMessage'
+import { isAiTriggeredDraft } from '../utils/workspace'
 
-const Chats = ({projectProp}) => {
-    const [isModal, setIsModal] = useState(false);
-    const [isModal2, setIsModal2] = useState(false);
-    const [allUsers, setallUsers] = useState([]);
-    const [search, setSearch] = useState("");
-    const [filteredUsers, setFilteredUsers] = useState([]);
-    const [selectedUsers, setSelectedUsers] = useState([]);
-    const [projectUsers, setProjectUsers] = useState([]);
-    const [message, setMessage] = useState("");
-    const [messages, setMessages] = useState([]);
+const Chats = ({
+  assistantInfo,
+  assistantStatus,
+  draftMessage,
+  isSending,
+  messages,
+  onDraftMessageChange,
+  onInsertPromptExample,
+  onOpenFile,
+  onSendMessage,
+  projectName,
+  sendError,
+  socketConnected,
+  userId,
+}) => {
+  const messagesEndRef = useRef(null)
+  const trigger = assistantInfo?.trigger || '@ai'
+  const isAiDraft = isAiTriggeredDraft(draftMessage)
+  const promptExamples = [
+    `${trigger} summarize the latest blockers`,
+    `${trigger} draft a clearer README intro`,
+    `${trigger} create a simple landing page`,
+  ]
 
-    const messagesEndRef = useRef(null);
-    const { user } = useContext(UserContext);
-
-    useEffect(() => {
-      initializeSocket(projectProp._id);
-
-      receiveMessage('project-message', data => {
-        if (data.sender?._id !== user?._id) {
-          setMessages(prev => [...prev, data]);
-        }
-      })
-
-      axios.get('/users/all')
-      .then((res) => {
-          setallUsers(res.data.users);
-      })
-      .catch((err) => {
-          console.log(err);
-      });
-
-      axios.get(`/projects/get-project/${projectProp._id}`)
-      .then((res) => {
-        console.log(res.data.project.users);
-        setProjectUsers(res.data.project.users);
-      }).catch((err) => {
-        console.log(err);
-      })
-    }, []);
-
-    useEffect(() => {
-      let result = allUsers;
-
-      if (projectUsers?.length) {
-        result = result.filter(user =>
-          !projectUsers.some(p => p._id === user._id)
-        );
-      }
-
-      if (search.trim() !== "") {
-        result = result.filter(user =>
-          user.email?.toLowerCase().includes(search.toLowerCase()) ||
-          user._id?.toLowerCase().includes(search.toLowerCase())
-        );
-      }
-
-      setFilteredUsers(result);
-    }, [search, allUsers, projectUsers]);
-
-    useEffect(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages]);
-
-    async function addUsersHandler(e){
-      e.preventDefault();
-      try {
-        const res = await axios.put('/projects/add-user', {
-          projectId: projectProp._id,
-          users: selectedUsers
-        });
-
-        setallUsers(prev =>
-          prev.filter(user => !selectedUsers.includes(user._id))
-        );
-
-        const newUsers = allUsers.filter(user =>
-          selectedUsers.includes(user._id)
-        );
-
-        setProjectUsers(prev => [...prev, ...newUsers]);
-
-        setIsModal(false);
-        setSelectedUsers([]);
-      } catch (err) {
-        console.log(err.response?.data || err.message);
-      }
-    }
-
-    async function sendHandler(e) {
-      e.preventDefault();
-
-      if (!message.trim()) return;
-      const msgData = {
-        message,
-        sender: user
-      };
-
-      sendMessage('project-message', msgData);
-      setMessages(prev => [...prev, msgData]);
-      setMessage("");
-    }
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   return (
-    <div className='m-2 h-[95%] w-[33%] rounded-2xl bg-black/30 flex flex-col-reverse'>
-      <style>{`
-        .chat-scroll {
-          scrollbar-width: thin;
-          scrollbar-color: rgba(201,163,74,0.4) rgba(0,0,0,0.2);
-        }
+    <section className="torq-shell torq-panel-rise flex min-h-[38rem] flex-col rounded-[1.9rem] overflow-hidden">
+      <div className="border-b border-[var(--torq-line)] bg-[linear-gradient(135deg,rgba(13,156,138,0.08),rgba(255,255,255,0))] px-5 py-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="torq-eyebrow">Discussion</p>
+            <h2 className="torq-heading mt-3 text-3xl">Project chat</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--torq-ink-soft)]">
+              Share updates with the team or start a message with {trigger} when
+              you want AI help for {projectName}.
+            </p>
+          </div>
 
-        .chat-scroll::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .chat-scroll::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.3); /* IMPORTANT: prevents default blue bleed */
-          border-radius: 10px;
-        }
-
-        .chat-scroll::-webkit-scrollbar-thumb {
-          background: rgba(201, 163, 74, 0.4); /* dim gold */
-          border-radius: 10px;
-          border: 1px solid rgba(201, 163, 74, 0.2);
-        }
-
-        .chat-scroll::-webkit-scrollbar-thumb:hover {
-          background: rgba(201, 163, 74, 0.6);
-        }
-      `}</style>
-      
-      <div className='h-[10%] bg-black/60 rounded-2xl flex flex-row items-center'>
-        <div className='h-[75%] w-[15%] rounded-2xl flex items-center justify-center ml-2'
-        onClick={() => {
-          if(!isModal && !isModal2){ setIsModal2(true); }
-          if(!isModal && isModal2){ setIsModal2(false); }
-          if(isModal && !isModal2){ setIsModal(false); setIsModal2(true) }
-        }}>
-          <img src={iconAllUsers} alt="Add Users" className='brightness-40 hover:brightness-65 hover:cursor-pointer
-          transition-all duration-300 ease-in-out
-          hover:scale-105
-          active:scale-95'/>
+          <div className="flex flex-wrap gap-2">
+            <div className={`torq-badge ${socketConnected ? 'torq-badge-live' : 'torq-badge-warn'}`}>
+              {socketConnected ? 'Live sync' : 'Offline mode'}
+            </div>
+            <div className={`torq-badge ${assistantInfo?.configured ? 'torq-badge-live' : 'torq-badge-warn'}`}>
+              {assistantInfo?.configured ? 'AI available' : 'AI unavailable'}
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={sendHandler} className='h-full w-full ml-2 flex items-center'>
-          <input type="text" value={message} onChange={(e) => {setMessage(e.target.value)}} className='h-[70%] w-[82%] p-2 border border-white/50 hover:border-white/80 focus:border-sky-300/80 rounded-2xl'
-          style={{fontFamily: 'Roboto Slab'}}/>
-          <button type='submit' className='h-[75%] w-[15%] rounded-2xl flex items-center justify-center ml-2'>
-            <img src={iconSendMsg} alt="Send" className='brightness-40 hover:brightness-65 hover:cursor-pointer
-            transition-all duration-300 ease-in-out
-            hover:scale-105
-            active:scale-95'/>
-          </button>
-        </form>
+        <div className="mt-5 flex flex-wrap gap-2">
+          {promptExamples.map((example) => (
+            <button
+              className="rounded-full border border-[var(--torq-line)] bg-[var(--torq-card-solid)] px-3 py-2 text-xs font-medium text-[var(--torq-ink-soft)] transition hover:border-[rgba(13,156,138,0.22)] hover:text-[var(--torq-teal)]"
+              key={example}
+              onClick={() => onInsertPromptExample(example)}
+              type="button"
+            >
+              {example}
+            </button>
+          ))}
+        </div>
       </div>
 
-      
-      <div className='relative h-full w-full flex items-center justify-center'>
-        {/* MESSAGING STARTS HERE */}
-        <div
-          className='chat-scroll absolute h-full w-full p-4 pb-6 pr-3 overflow-y-auto flex flex-col gap-3'
-          style={{
-            scrollbarWidth: "thin",
-            scrollbarColor: "#3ba4ff transparent"
-          }}
-        >
-          {messages.map((msg, index) => {
-            const isMe = msg.sender?._id === user?._id;
+      <div className="flex-1 overflow-y-auto bg-[rgba(255,255,255,0.22)] px-5 py-5">
+        {assistantStatus === 'thinking' ? (
+          <div className="mb-4 rounded-[1.1rem] border border-[rgba(13,156,138,0.16)] bg-[var(--torq-teal-soft)] px-4 py-3 text-sm text-[var(--torq-teal)]">
+            Torq AI is working on a reply.
+          </div>
+        ) : null}
 
-            return isMe ? (
-              <SentMessage key={index} messageInfo={msg} />
+        {messages.length ? (
+          messages.map((message) =>
+            message.sender?._id === userId ? (
+              <SentMessage
+                key={message._id || `${message.createdAt}-${message.content}`}
+                messageInfo={message}
+              />
             ) : (
-              <ReceiveMessage key={index} messageInfo={msg} />
-            );
-          })}
+              <ReceiveMessage
+                key={message._id || `${message.createdAt}-${message.content}`}
+                messageInfo={message}
+                onOpenFile={onOpenFile}
+              />
+            ),
+          )
+        ) : (
+          <div className="flex h-full min-h-72 items-center justify-center rounded-[1.5rem] border border-dashed border-[var(--torq-line)] bg-[var(--torq-card-solid)] px-6 text-center">
+            <div>
+              <p className="torq-eyebrow">No messages yet</p>
+              <p className="mt-3 text-sm leading-7 text-[var(--torq-ink-soft)]">
+                Start with a quick update, a question, or an AI request.
+              </p>
+            </div>
+          </div>
+        )}
 
-          <div ref={messagesEndRef} />
-        </div>
-        
-        
-        
-        {/* ALL COLABORATORS MODAL STARTS HERE */}
-        <div className={`absolute inset-7 bg-black/1 backdrop-blur-md h-[90%] w-[90%] rounded-3xl 
-        ${isModal2 ? "opacity-100" : "opacity-0 pointer-events-none"}
-        transition-all duration-300 flex flex-col`}>
-          
-          <div className="bg-black/50 p-4 rounded-2xl flex justify-between items-center mb-4">
-            <h2 className="text-blue-100 text-lg font-semibold" style={{fontFamily:"Orbitron"}}>All Collaborators</h2>
-            
-            <div className='w-[8%] rounded-2xl flex items-center justify-center'
-            onClick={() => {setIsModal2(false); setIsModal(true)}}>
-              <img src={addUsersIcon} alt="Add Users" className='brightness-40 hover:brightness-65 hover:cursor-pointer
-              transition-all duration-300 ease-in-out
-              hover:scale-105
-              active:scale-95'/>
+        <div ref={messagesEndRef} />
+      </div>
+
+      <div className="border-t border-[var(--torq-line)] px-5 py-5">
+        <form className="space-y-3" onSubmit={onSendMessage}>
+          <textarea
+            className={`torq-textarea min-h-[7.5rem] px-4 py-4 text-sm leading-7 ${
+              isAiDraft ? 'border-[rgba(13,156,138,0.28)] bg-[var(--torq-teal-soft)]' : ''
+            }`}
+            onChange={(event) => onDraftMessageChange(event.target.value)}
+            placeholder={`Write a message, or start with ${trigger} to ask AI for help...`}
+            value={draftMessage}
+          />
+
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="torq-shell-soft rounded-[1rem] px-4 py-3 text-sm text-[var(--torq-ink-soft)]">
+              {isAiDraft
+                ? 'This will be sent as an AI request.'
+                : 'Messages are saved automatically in this project.'}
             </div>
 
             <button
-              onClick={() => setIsModal2(false)}
-              className="bg-orange-200/30 hover:bg-orange-200/50 rounded-full pr-2 pl-2 pt-0.5 pb-0.5 text-blue-100 text-xl hover:scale-110 transition hover:cursor-pointer"
+              className="torq-primary-button px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSending || !draftMessage.trim()}
+              type="submit"
             >
-              ✕
+              {isSending ? 'Sending...' : isAiDraft ? 'Ask AI' : 'Send message'}
             </button>
           </div>
 
-          <div className="mr-2 ml-3 flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-            {projectUsers.length === 0 ? (
-              <p className="text-gray-400 text-center">No collaborators yet</p>
-            ) : (
-              projectUsers.map(({ email, _id }) => (
-                <div key={_id} className="flex items-center gap-3 p-3 rounded-xl bg-white/5">
-
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-blue-100">
-                    {email?.[0]?.toUpperCase()}
-                  </div>
-
-                  <div className="flex flex-col">
-                    <span className="text-white text-sm">{email}</span>
-                    <span className="text-gray-400 text-xs">{_id}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-        {/* ALL COLABORATORS MODAL ENDS HERE */}
-        
-        
-        {/* ADD COLABORATORS MODAL STARTS HERE */}
-        <form onSubmit={addUsersHandler} className={`absolute inset-7 bg-black/1 backdrop-blur-md h-[90%] w-[90%] rounded-3xl 
-          ${isModal ? "opacity-100" : "opacity-0 pointer-events-none"}
-          transition-all duration-300 flex flex-col`}>
-
-          <div className="bg-black/50 p-4 rounded-2xl flex justify-between items-center mb-4">
-            <h2 className="text-blue-100 text-lg font-semibold" style={{fontFamily:"Orbitron"}}>Add Collaborators</h2>
-            <button
-              onClick={() => {setIsModal(false); setIsModal2(true)}}
-              className="bg-orange-200/30 hover:bg-orange-200/50 rounded-full pr-2 pl-2 pt-0.5 pb-0.5 text-blue-100 text-xl hover:scale-110 transition hover:cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Search users . . ."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="mb-4 ml-4 mr-4 p-2 rounded-lg bg-white/10 text-blue-100 outline-none border border-white/20"
-            style={{fontFamily:"Orbitron"}}
-          />
-
-          <div className="mr-2 ml-3 flex-1 overflow-y-auto flex flex-col gap-2 pr-1">
-            {filteredUsers.map(({ email, _id }) => (
-              <div
-                key={_id}
-                className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/20 transition cursor-pointer"
-              >
-                <input type="checkbox"
-                className="accent-cyan-500"
-                onChange={() => {
-                  setSelectedUsers(prev => 
-                    prev.includes(_id)
-                      ? prev.filter(id => id !== _id)
-                      : [...prev, _id]
-                  );
-                }}
-                />
-
-                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs text-blue-100" style={{fontFamily:"Orbitron"}}>
-                  {email?.[0]?.toUpperCase()}
-                </div>
-
-                <div className="flex flex-col">
-                  <span className="text-white text-sm">{email}</span>
-                  <span className="text-gray-400 text-xs">{_id}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex justify-end gap-3 m-4">
-            <button onClick={() => {setIsModal(false); setIsModal2(true)}} type='submit' className="px-4 py-2 rounded-lg bg-orange-200/30 text-blue-100 hover:bg-orange-200/50 transition hover:cursor-pointer"
-              style={{fontFamily:"Orbitron"}}>
-              Add Users
-            </button>
-          </div>
+          {sendError ? (
+            <div className="torq-danger-panel rounded-[1rem] px-4 py-3 text-sm">
+              {sendError}
+            </div>
+          ) : null}
         </form>
-        {/* ADD COLABORATORS MODAL ENDS HERE */}
       </div>
-    </div>
+    </section>
   )
 }
 

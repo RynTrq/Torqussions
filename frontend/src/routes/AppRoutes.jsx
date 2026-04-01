@@ -1,20 +1,35 @@
 import React from 'react'
-import {Route, BrowserRouter, Routes} from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import Login from '../screens/Login'
 import Signup from '../screens/Signup'
 import Home from '../screens/Home'
 import Project from '../screens/Project'
-import UserAuth from '../auth/UserAuth'
+import ProtectedRoute from '../components/ProtectedRoute'
 
 const AppRoutes = () => {
   return (
     <BrowserRouter>
-        <Routes>
-            <Route path="/" element={<UserAuth><Home /></ UserAuth>} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Signup />} />
-            <Route path="/project" element={<UserAuth><Project /></UserAuth>} />
-        </Routes>
+      <Routes>
+        <Route
+          element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          }
+          path="/"
+        />
+        <Route element={<Login />} path="/login" />
+        <Route element={<Signup />} path="/register" />
+        <Route
+          element={
+            <ProtectedRoute>
+              <Project />
+            </ProtectedRoute>
+          }
+          path="/project/:projectId"
+        />
+        <Route element={<Navigate replace to="/" />} path="*" />
+      </Routes>
     </BrowserRouter>
   )
 }

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom';
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import icon1 from '../assets/Project-Icons/1.png'
 import icon2 from '../assets/Project-Icons/2.png'
@@ -17,61 +17,105 @@ import icon13 from '../assets/Project-Icons/13.png'
 import icon14 from '../assets/Project-Icons/14.png'
 import icon15 from '../assets/Project-Icons/15.png'
 import icon16 from '../assets/Project-Icons/16.png'
+import { formatRelativeTime, isPreviewableFile } from '../utils/workspace'
 
 const icons = [
-  icon1, icon2, icon3, icon4,
-  icon5, icon6, icon7, icon8,
-  icon9, icon10, icon11, icon12,
-  icon13, icon14, icon15, icon16
+  icon1,
+  icon2,
+  icon3,
+  icon4,
+  icon5,
+  icon6,
+  icon7,
+  icon8,
+  icon9,
+  icon10,
+  icon11,
+  icon12,
+  icon13,
+  icon14,
+  icon15,
+  icon16,
 ]
 
-const ProjectCard = ( {projectProp} ) => {
-  const {name, description} = projectProp;
+const hashProjectId = (value = '') =>
+  Array.from(value).reduce(
+    (accumulator, character) =>
+      character.charCodeAt(0) + ((accumulator << 5) - accumulator),
+    0,
+  )
 
-  const navigate = useNavigate();
-
-  const randomIcon = useMemo(() => {
-    const index = Math.floor(Math.random() * icons.length)
-    return icons[index]
-  }, [])
+const ProjectCard = ({ project }) => {
+  const navigate = useNavigate()
+  const icon = icons[Math.abs(hashProjectId(project._id || project.name)) % icons.length]
+  const previewReady = Object.keys(project.fileTree || {}).some((fileName) =>
+    isPreviewableFile(fileName),
+  )
 
   return (
-    <div className='h-72 w-full max-w-[420px] rounded-2xl bg-black/20 border-2 border-gray-900 flex flex-col
-      transition-all duration-300 ease-in-out
-      hover:scale-105
-      hover:shadow-[0_0_18px_rgba(255,255,255,0.35)]
-      active:scale-95
-      active:shadow-[0_0_10px_rgba(255,255,255,0.6)]
-      hover:brightness-110
-      hover:cursor-pointer'
-      onClick={() => {
-        navigate('/project', {
-          state: {projectProp}
+    <button
+      className="torq-shell torq-panel-rise group flex h-full min-h-[18rem] w-full flex-col rounded-[1.8rem] p-5 text-left transition duration-200 hover:-translate-y-1.5 hover:shadow-[0_28px_66px_rgba(13,25,44,0.16)]"
+      onClick={() =>
+        navigate(`/project/${project._id}`, {
+          state: { project },
         })
-      }}>
-      <div className='h-[70%] mb-2 flex flex-row p-4'>
-        <img src={randomIcon} alt="Project Icon" className='h-full'/>
+      }
+      type="button"
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="flex h-[3.75rem] w-[3.75rem] shrink-0 items-center justify-center rounded-[1.15rem] border border-[var(--torq-line)] bg-[linear-gradient(180deg,rgba(13,156,138,0.12),rgba(255,255,255,0.12))] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+            <img alt={`${project.name} icon`} className="h-full w-full object-contain" src={icon} />
+          </div>
 
-        <div className='flex flex-col'>
-          <h1 className='text-3xl ml-2' style={{fontFamily:"Orbitron"}}>
-            {name}
-          </h1>
+          <div className="min-w-0">
+            <p className="torq-eyebrow">Project room</p>
+            <h3 className="torq-heading mt-2 truncate text-2xl">{project.name}</h3>
+          </div>
+        </div>
 
-          <p className='mt-2 text-gray-400' style={{fontFamily:"Roboto Slab"}}>
-            {description}
+        <span className="torq-badge torq-badge-neutral">{project.status || 'active'}</span>
+      </div>
+
+      <p className="mt-5 line-clamp-3 text-sm leading-7 text-[var(--torq-ink-soft)]">
+        {project.description}
+      </p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <span className="torq-badge torq-badge-live">{project.users?.length || 1} people</span>
+        <span className="torq-badge torq-badge-neutral">
+          {Object.keys(project.fileTree || {}).length} files
+        </span>
+        {previewReady ? <span className="torq-badge torq-badge-warn">Preview ready</span> : null}
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <div className="torq-highlight-card rounded-[1.15rem] border border-[var(--torq-line)] bg-[rgba(255,255,255,0.42)] px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--torq-ink-faint)]">
+            Last activity
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--torq-ink)]">
+            {formatRelativeTime(project.lastActivityAt || project.updatedAt)}
+          </p>
+        </div>
+
+        <div className="torq-highlight-card rounded-[1.15rem] border border-[var(--torq-line)] bg-[rgba(255,255,255,0.42)] px-4 py-3">
+          <p className="text-xs uppercase tracking-[0.18em] text-[var(--torq-ink-faint)]">
+            Room type
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--torq-ink)]">
+            Chat, files, preview
           </p>
         </div>
       </div>
 
-      <div className='flex justify-between items-center px-4 pb-4'>
-        <span className='text-green-400 text-sm'>
-          ● Active
-        </span>
-        <span className='text-gray-500 text-sm'>
-          Updated recently
+      <div className="mt-auto flex items-center justify-between border-t border-[var(--torq-line)] pt-5">
+        <p className="text-sm text-[var(--torq-ink-soft)]">Open the workspace</p>
+        <span className="text-sm font-semibold text-[var(--torq-teal)] transition group-hover:translate-x-1">
+          Enter room
         </span>
       </div>
-    </div>
+    </button>
   )
 }
 

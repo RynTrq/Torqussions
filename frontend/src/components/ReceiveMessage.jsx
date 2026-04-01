@@ -1,34 +1,71 @@
 import React from 'react'
+import MessageBody from './MessageBody'
+import {
+  formatClockTime,
+  getMessageContent,
+  getMessageWorkspaceUpdate,
+  getUserDisplayName,
+  isAiMessage,
+} from '../utils/workspace'
 
-const ReceiveMessage = ({ messageInfo }) => {
-  return (
-    <div className="w-full flex justify-start px-4 my-2">
+const ReceiveMessage = ({ messageInfo, onOpenFile }) => {
+  const aiReply = isAiMessage(messageInfo)
+  const modelLabel = messageInfo?.metadata?.model?.replace(/^gemini-/i, 'Gemini ') || ''
+  const workspaceUpdate = getMessageWorkspaceUpdate(messageInfo)
 
-      <div
-        className="
-          relative max-w-[70%] px-5 py-3 text-sm text-blue-100 wrap-break-words whitespace-pre-wrap
-          bg-[#0b1220]/80 border border-[#3ba4ff]/40 rounded-lg shadow-[0_0_10px_rgba(59,164,255,0.2)]
-        ">
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-[#3ba4ff] rounded-tl-lg" />
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-[#3ba4ff] rounded-tr-lg" />
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-[#3ba4ff] rounded-bl-lg" />
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-[#3ba4ff] rounded-br-lg" />
+  if (aiReply) {
+    return (
+      <div className="my-3 flex w-full justify-start">
+        <div className="max-w-[92%] rounded-[1.4rem] border border-[rgba(13,156,138,0.16)] bg-[linear-gradient(180deg,rgba(13,156,138,0.12),rgba(255,255,255,0.52))] px-4 py-4 text-sm text-[var(--torq-ink)] shadow-[0_18px_32px_rgba(13,25,44,0.08)] sm:max-w-[80%]">
+          <div className="flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.14em] text-[var(--torq-teal)]">
+            <span>{getUserDisplayName(messageInfo?.sender)}</span>
+            {modelLabel ? <span>{modelLabel}</span> : null}
+            <span>{formatClockTime(messageInfo?.createdAt)}</span>
+          </div>
 
-        <div style={{ fontFamily: "Roboto Slab" }}>
-          {messageInfo?.message}
+          <div className="mt-3">
+            <MessageBody content={getMessageContent(messageInfo)} tone="ai" />
+          </div>
+
+          {workspaceUpdate?.files?.length ? (
+            <div className="mt-4 rounded-[1rem] border border-[var(--torq-line)] bg-[var(--torq-card-solid)] px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--torq-ink)]">Files added to the project</p>
+              {workspaceUpdate.summary ? (
+                <p className="mt-2 text-sm leading-7 text-[var(--torq-ink-soft)]">
+                  {workspaceUpdate.summary}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {workspaceUpdate.files.map((file) => (
+                  <button
+                    className="rounded-full border border-[var(--torq-line)] bg-[var(--torq-teal-soft)] px-3 py-2 text-xs font-medium text-[var(--torq-teal)]"
+                    key={file.path}
+                    onClick={() => onOpenFile?.(file.path)}
+                    type="button"
+                  >
+                    {file.path}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
-        <div className="flex items-center justify-between mt-2">
-          <div 
-            className="text-xs text-[#3ba4ff]/70"
-            style={{ fontFamily: "Roboto Slab" }}
-          >
-            {messageInfo?.sender?.email}
-          </div>
-          <div className="flex gap-1 ml-3">
-            <div className="w-2 h-1 bg-[#3ba4ff]/60"></div>
-            <div className="w-3 h-1 bg-[#3ba4ff]/80"></div>
-            <div className="w-4 h-1 bg-[#3ba4ff]"></div>
-          </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="my-3 flex w-full justify-start">
+      <div className="max-w-[88%] rounded-[1.35rem] border border-[var(--torq-line)] bg-[var(--torq-card-solid)] px-4 py-3 text-sm text-[var(--torq-ink)] shadow-[0_14px_26px_rgba(13,25,44,0.06)] sm:max-w-[72%]">
+        <div className="flex flex-wrap items-center gap-2 text-[0.68rem] uppercase tracking-[0.14em] text-[var(--torq-ink-soft)]">
+          <span>{getUserDisplayName(messageInfo?.sender)}</span>
+          <span>•</span>
+          <span>{formatClockTime(messageInfo?.createdAt)}</span>
+        </div>
+
+        <div className="mt-3">
+          <MessageBody content={getMessageContent(messageInfo)} tone="cool" />
         </div>
       </div>
     </div>

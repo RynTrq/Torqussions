@@ -1,12 +1,15 @@
 import React from 'react'
 import AppRoutes from './routes/AppRoutes'
+import { ThemeProvider } from './context/theme.context'
 import { UserProvider } from './context/user.context'
 
 const App = () => {
   return (
-    <UserProvider>
-      <AppRoutes />
-    </UserProvider>
+    <ThemeProvider>
+      <UserProvider>
+        <AppRoutes />
+      </UserProvider>
+    </ThemeProvider>
   )
 }
 
