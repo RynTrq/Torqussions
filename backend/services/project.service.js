@@ -165,7 +165,7 @@ const persistProjectFileTree = async ({ projectId, fileTree }) => {
                     },
                 },
                 {
-                    new: true,
+                    returnDocument: 'after',
                 },
             ),
         ),
@@ -672,7 +672,7 @@ export const promoteProjectAdmin = async ({ memberId, projectId, userId }) => {
                     },
                 },
                 {
-                    new: true,
+                    returnDocument: 'after',
                 },
             ),
         ),
@@ -726,7 +726,7 @@ export const removeProjectMember = async ({ memberId, projectId, userId }) => {
                     },
                 },
                 {
-                    new: true,
+                    returnDocument: 'after',
                 },
             ),
         ),
@@ -778,7 +778,7 @@ export const leaveProject = async ({ projectId, userId }) => {
                     },
                 },
                 {
-                    new: true,
+                    returnDocument: 'after',
                 },
             ),
         ),
@@ -853,7 +853,7 @@ export const updateProjectAssistantSettings = async ({
                     },
                 },
                 {
-                    new: true,
+                    returnDocument: 'after',
                 },
             ),
         ),
