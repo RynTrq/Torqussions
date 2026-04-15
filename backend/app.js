@@ -23,14 +23,13 @@ const sendFrontendIndex = (res) => {
 const app = express()
 
 app.disable('x-powered-by')
-app.use(cors(corsOptions))
 app.use(morgan('dev'))
 app.use(express.json({ limit: '1mb' }))
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
-app.use('/users', userRoutes)
-app.use('/projects', projectRoutes)
+app.use('/users', cors(corsOptions), userRoutes)
+app.use('/projects', cors(corsOptions), projectRoutes)
 
 app.get('/', (req, res) => {
   if (hasFrontendBuild) {
