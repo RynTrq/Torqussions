@@ -15,6 +15,11 @@ const frontendDistPath = path.resolve(__dirname, '../frontend/dist')
 const frontendIndexPath = path.join(frontendDistPath, 'index.html')
 const hasFrontendBuild = fs.existsSync(frontendIndexPath)
 
+const sendFrontendIndex = (res) => {
+  res.set('Cache-Control', 'no-store')
+  res.sendFile(frontendIndexPath)
+}
+
 const app = express()
 
 app.disable('x-powered-by')
@@ -29,7 +34,7 @@ app.use('/projects', projectRoutes)
 
 app.get('/', (req, res) => {
   if (hasFrontendBuild) {
-    res.sendFile(frontendIndexPath)
+    sendFrontendIndex(res)
     return
   }
 
@@ -44,7 +49,18 @@ app.get('/health', (_req, res) => {
 })
 
 if (hasFrontendBuild) {
-  app.use(express.static(frontendDistPath))
+  app.use(
+    express.static(frontendDistPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath === frontendIndexPath) {
+          res.setHeader('Cache-Control', 'no-store')
+          return
+        }
+
+        res.setHeader('Cache-Control', 'no-cache')
+      },
+    }),
+  )
 
   app.use((req, res, next) => {
     const isApiRequest =
@@ -52,18 +68,25 @@ if (hasFrontendBuild) {
       req.path.startsWith('/projects') ||
       req.path === '/health'
 
+    if (req.path.startsWith('/assets/')) {
+      res.status(404).json({
+        error: `Asset ${req.path} was not found`,
+      })
+      return
+    }
+
     if (req.method !== 'GET' || isApiRequest) {
       next()
       return
     }
 
-    res.sendFile(frontendIndexPath)
+    sendFrontendIndex(res)
   })
 }
 
 app.use((req, res) => {
   if (hasFrontendBuild && req.method === 'GET') {
-    res.sendFile(frontendIndexPath)
+    sendFrontendIndex(res)
     return
   }
 
