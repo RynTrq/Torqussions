@@ -1,0 +1,16 @@
+{
+  "name": "torqussions",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm --prefix backend install --include=dev && npm --prefix frontend install --include=dev",
+    "build": "npm --prefix frontend run build",
+    "check": "npm --prefix backend run check && npm --prefix frontend run build",
+    "dev": "node scripts/dev.js",
+    "lint": "npm --prefix frontend run lint",
+    "postinstall": "npm run install:all",
+    "start": "npm --prefix backend run start",
+    "test": "npm --prefix backend run test && npm --prefix frontend run test",
+    "validate:env": "npm --prefix backend run validate:env"
+  }
+}
