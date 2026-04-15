@@ -30,9 +30,14 @@ test('normalizeFileTree preserves valid entries and injects fallback when empty'
 
 test('formatAiModelLabel keeps provider context stable', () => {
   assert.equal(getAiProviderLabel('grok'), 'Grok')
+  assert.equal(getAiProviderLabel('groq'), 'Groq')
   assert.equal(
     formatAiModelLabel({ provider: 'grok', model: 'grok-4' }),
     'grok-4',
+  )
+  assert.equal(
+    formatAiModelLabel({ provider: 'groq', model: 'llama-3.3-70b-versatile' }),
+    'Groq llama-3.3-70b-versatile',
   )
   assert.equal(
     formatAiModelLabel({ provider: 'gemini', model: 'Gemini 2.5 Flash' }),

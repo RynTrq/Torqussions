@@ -41,6 +41,7 @@ const EXECUTION_RUNTIME_LABELS = {
 
 const AI_PROVIDER_LABELS = {
   gemini: 'Gemini',
+  groq: 'Groq',
   grok: 'Grok',
 }
 

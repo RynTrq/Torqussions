@@ -18,6 +18,7 @@ const MAX_REPLY_CHARS = 12_000;
 
 const AI_PROVIDER_LABELS = {
     gemini: 'Gemini',
+    groq: 'Groq',
     grok: 'Grok',
 };
 
@@ -30,10 +31,16 @@ const AI_PROVIDER_MODEL_OPTIONS = {
         'grok-4',
         'grok-4-fast-reasoning',
     ],
+    groq: [
+        'llama-3.3-70b-versatile',
+        'llama-3.1-8b-instant',
+        'openai/gpt-oss-120b',
+    ],
 };
 
 const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
 const GROK_API_BASE_URL = 'https://api.x.ai/v1';
+const GROQ_API_BASE_URL = 'https://api.groq.com/openai/v1';
 
 const getTrimmedEnv = (key) => process.env[key]?.trim() || '';
 
@@ -49,6 +56,12 @@ const AI_PROVIDER_CONFIG = {
         defaultModel: () => getTrimmedEnv('GROK_MODEL') || AI_PROVIDER_MODEL_OPTIONS.grok[0],
         label: AI_PROVIDER_LABELS.grok,
         models: AI_PROVIDER_MODEL_OPTIONS.grok,
+    },
+    groq: {
+        apiKey: () => getTrimmedEnv('GROQ_API_KEY'),
+        defaultModel: () => getTrimmedEnv('GROQ_MODEL') || AI_PROVIDER_MODEL_OPTIONS.groq[0],
+        label: AI_PROVIDER_LABELS.groq,
+        models: AI_PROVIDER_MODEL_OPTIONS.groq,
     },
 };
 
@@ -278,6 +291,9 @@ const extractGrokText = (payload) =>
         .join('')
         .trim() || '';
 
+const extractGroqText = (payload) =>
+    payload?.choices?.[0]?.message?.content?.trim() || '';
+
 export const normalizeAiProvider = (value = '') => {
     const normalizedProvider = String(value || '').trim().toLowerCase();
     return AI_PROVIDER_CONFIG[ normalizedProvider ] ? normalizedProvider : '';
@@ -316,9 +332,12 @@ export const getRecommendedAiModels = (provider = '') =>
 export const getResolvedAssistantSettings = (project = null) => {
     const projectProvider = normalizeAiProvider(project?.assistant?.provider);
     const defaultProvider = getDefaultAiProvider();
-    const provider = projectProvider || defaultProvider;
+    const projectProviderConfig = AI_PROVIDER_CONFIG[ projectProvider ];
+    const provider = projectProviderConfig?.apiKey() ? projectProvider : defaultProvider;
     const model =
-        truncateText(project?.assistant?.model || '', 120) || getDefaultAiModel(provider);
+        projectProvider === provider
+            ? truncateText(project?.assistant?.model || '', 120) || getDefaultAiModel(provider)
+            : getDefaultAiModel(provider);
     const providerConfig = AI_PROVIDER_CONFIG[ provider ];
     const availableProviders = getAvailableAiProviders();
 
@@ -516,6 +535,59 @@ const generateGrokReply = async ({ apiKey, model, project, prompt, recentMessage
     return extractGrokText(payload);
 };
 
+const generateGroqReply = async ({ apiKey, model, project, prompt, recentMessages }) => {
+    const requestBody = {
+        messages: [
+            {
+                content: buildSystemInstruction(),
+                role: 'system',
+            },
+            {
+                content: buildUserPrompt({
+                    project,
+                    prompt,
+                    recentMessages,
+                }),
+                role: 'user',
+            },
+        ],
+        max_tokens: 4096,
+        model,
+        response_format: {
+            type: 'json_object',
+        },
+        temperature: 0.55,
+    };
+
+    let response;
+
+    try {
+        response = await fetch(`${GROQ_API_BASE_URL}/chat/completions`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+    } catch (error) {
+        throw new HttpError(502, 'Groq could not be reached right now.', {
+            cause: error.message,
+        });
+    }
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        throw new HttpError(
+            response.status >= 500 ? 502 : response.status,
+            payload?.error?.message || 'Groq could not generate a response right now.',
+        );
+    }
+
+    return extractGroqText(payload);
+};
+
 const generateRawProviderReply = async ({
     apiKey,
     model,
@@ -526,6 +598,16 @@ const generateRawProviderReply = async ({
 }) => {
     if (provider === 'grok') {
         return generateGrokReply({
+            apiKey,
+            model,
+            project,
+            prompt,
+            recentMessages,
+        });
+    }
+
+    if (provider === 'groq') {
+        return generateGroqReply({
             apiKey,
             model,
             project,

@@ -3,7 +3,7 @@ import mongoose from 'mongoose'
 import Redis from 'ioredis'
 
 const requiredKeys = ['MONGO_URI', 'JWT_SECRET']
-const recommendedKeys = ['GEMINI_API_KEY', 'XAI_API_KEY']
+const recommendedKeys = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'XAI_API_KEY']
 
 const statusLines = []
 let hasFailure = false

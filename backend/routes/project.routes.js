@@ -68,8 +68,8 @@ const assistantValidators = [
     body('provider')
         .isString()
         .trim()
-        .isIn([ 'gemini', 'grok' ])
-        .withMessage('Provider must be Gemini or Grok'),
+        .isIn([ 'gemini', 'groq', 'grok' ])
+        .withMessage('Provider must be Gemini, Groq, or Grok'),
     body('model')
         .isString()
         .trim()
